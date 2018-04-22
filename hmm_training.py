@@ -120,7 +120,7 @@ def main():
 
         """ Run the training process: (n_interaction) times in parallel fashion: """
         best_model_list = hmm_model_training(range(n_interaction*len(v)+1))
-        print(best_model_list)
+        # print(best_model_list)
         final_model, log_register = hmm_u.select_best_model_from_list(best_model_list, dataSet)
 
         """ Ordering the best model according to a Hierarchical Clustering """
