@@ -21,6 +21,7 @@ def get_ipp_client(profile='default'):
 
 
 def pivot_DF_using_dates_and_hours(df):
+    df = df[~df.index.duplicated(keep='first')]
     """ Allow to pivot the dataframe using dates and hours"""
     df["hour"] = [x.time() for x in df.index]
     df['date'] = [x._date_repr for x in df.index]
@@ -45,16 +46,18 @@ def select_best_HMM(training_set, validating_set, nComp_list, seed=777):
     best_model, log_register_list = None, list()
     np.random.seed(seed)  # different random seed
     for n_component in nComp_list:
-        model = GaussianHMM(n_components=n_component, covariance_type="diag", n_iter=100).fit(training_set)
-        assert isinstance(model,GaussianHMM)
-        score, log_prob = score_model(validating_set, model)
-        log_register_list.append((n_component, round(score,5), round(log_prob,5)))
+        try:
+            model = GaussianHMM(n_components=n_component, covariance_type="diag", n_iter=100).fit(training_set)
+            assert isinstance(model,GaussianHMM)
+            score, log_prob = score_model(validating_set, model)
+            log_register_list.append((n_component, round(score,5), round(log_prob,5)))
 
-        if score > best_score and log_prob > best_log_prob:
-            best_score = score
-            best_model = model
-            best_log_prob = log_prob
-
+            if score > best_score and log_prob > best_log_prob:
+                best_score = score
+                best_model = model
+                best_log_prob = log_prob
+        except:
+            return None, None
     #return best_model, score_list, best_log_prob
     return best_model, log_register_list
 
@@ -121,14 +124,16 @@ def ordered_hmm_model(model, method='average', metric='euclidean'):
     from scipy.cluster.hierarchy import linkage
     import copy
     from hmmlearn.hmm import GaussianHMM
-
-    assert isinstance(model,GaussianHMM)
     ordered_model = copy.deepcopy(model)
+
+    #try:
+    # assert isinstance(model,GaussianHMM)
 
     """ Z_f contains the distance matrix of the means of the model """
     Z_f = linkage(model.means_, method=method, metric=metric)
 
     """ Create a new order for the means of the model according to the hierarchical clustering """
+
     n_comp, new_order = model.n_components, list()
     for idx, idy, d, c in Z_f:
         if idx < n_comp:
@@ -139,6 +144,7 @@ def ordered_hmm_model(model, method='average', metric='euclidean'):
 
     """ Ordering the means and covars according to 'new_order': """
     # The use of model._covars_ is exceptional, usually it should be "model.covars_"
+
     old_means, old_covars = model.means_, model._covars_
     new_means, new_covars = np.zeros_like(old_means), np.zeros_like(old_covars)
     for idx, re_idx in zip(list(range(n_comp)), new_order):
@@ -161,6 +167,9 @@ def ordered_hmm_model(model, method='average', metric='euclidean'):
     ordered_model.covars_ = new_covars
 
     return ordered_model
+    #except:
+    #    return model
+
 
 
 def save_model_and_log(model, log_register, model_path, log_path, file_name):

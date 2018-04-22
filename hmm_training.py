@@ -74,12 +74,10 @@ def main():
         import hmm_util as hmm_u
         import numpy as np
 
-
         # Shared variables:
         global var_dataSet      # dview.push({'var_dataSet': dataset})
         global var_list_nComp   # dview.scatter('var_list_nComp', list(range(n_comp_min,n_comp_max+1)))
         global var_index        # dview.scatter('var_index', list(len(df.index)))
-
 
         """ Taking a slide of the hole data set for validating purposes """
         validating_set = var_dataSet[var_index]
@@ -90,12 +88,9 @@ def main():
         """ Training a list of best models """
         best_model, log_register = hmm_u.select_best_HMM(training_set, validating_set, var_list_nComp, seed=idp)
 
-        """ Ordering the best model according to a Hierarchical Clustering """
-        ordered_model = hmm_u.ordered_hmm_model(best_model, method='average',metric='euclidean')
-
         """ Send the best model and a register/log of the training process """
-        return {'model': ordered_model, "log_register": log_register}
-
+        return {'model': best_model, "log_register": log_register}
+        # return len(var_dataSet)
     """ ________________________________________________________
         END: Defining the parallel function for training process 
     """
@@ -109,6 +104,10 @@ def main():
         # df = df.head(100) #only 100 samples
         dataSet = df.values
 
+        if len(dataSet) == 0:
+            print("Check information for {0}".format(fileName))
+            continue
+
         print("[{0:4.2f}] Training a HMM model for: \t\t{1}".format(d_time(tr), fileName))
         tc = time.time()    # measuring training process
         """ Setting engines for the training process"""
@@ -117,17 +116,22 @@ def main():
         # scattering indexes for validating purposes:
         dview.scatter('var_index', list(range(len(df.index))))
         dview.gather('var_index').get()  # make sure "var_index" is in engines.
+        dview.pull('var_dataSet').get()
 
         """ Run the training process: (n_interaction) times in parallel fashion: """
         best_model_list = hmm_model_training(range(n_interaction*len(v)+1))
+        print(best_model_list)
         final_model, log_register = hmm_u.select_best_model_from_list(best_model_list, dataSet)
+
+        """ Ordering the best model according to a Hierarchical Clustering """
+        ordered_model = hmm_u.ordered_hmm_model(final_model, method='average',metric='euclidean')
+
 
         """ Saving the best model and his log_register for posterior analysis"""
         print("[{0:4.2f}] Select from final list ({2}) in: \t{1:4.2f}".format(d_time(tr), d_time(tc),
                                                                                 len(best_model_list)))
-        hmm_u.save_model_and_log(final_model, log_register, ModelPath, LogPath, fileName)
+        hmm_u.save_model_and_log(ordered_model, log_register, ModelPath, LogPath, fileName)
         print("[{0:4.2f}] End training process in: \t\t{1:4.2f}\n ".format(d_time(tr), d_time(tc)))
-
 
     print('[{0:4.2f}] End of script '.format(d_time(tr)))
 
@@ -136,4 +140,4 @@ if __name__ == "__main__":
     main()
 
 
-    # main()
+main()
