@@ -158,7 +158,7 @@ def ordered_hmm_model(model, method='average', metric='euclidean'):
         for y in list(range(n)):
             new_transmat[y, x] = old_transmat[new_order[y], new_order[x]]
 
-    start_p = np.array([round(1 / n_comp, 6) for i in range(n_comp)])
+    start_p = np.array([1 / n_comp for i in range(n_comp)])
 
     """ Setting the new ordered model """
     ordered_model.startprob_ = start_p

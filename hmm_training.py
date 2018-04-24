@@ -10,8 +10,8 @@ import warnings
 DataPath = "./data/"
 ModelPath = "./model/"
 LogPath = "./log/"
-n_comp_min = 15
-n_comp_max = 35
+n_comp_min = 35
+n_comp_max = 80
 n_interaction = 20
 
 
