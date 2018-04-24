@@ -10,8 +10,8 @@ import warnings
 DataPath = "./data/"
 ModelPath = "./model/"
 LogPath = "./log/"
-n_comp_min = 35
-n_comp_max = 80
+n_comp_min = 40
+n_comp_max = 70
 n_interaction = 20
 
 
@@ -83,7 +83,7 @@ def main():
         validating_set = var_dataSet[var_index]
         """ Taking the rest of the dataSet for training purposes """
         ini, end = var_index[0], var_index[-1]
-        training_set = np.concatenate((var_dataSet[0:ini],var_dataSet[end:-1]))
+        training_set = np.concatenate((var_dataSet[0:ini], var_dataSet[end:-1]))
 
         """ Training a list of best models """
         best_model, log_register = hmm_u.select_best_HMM(training_set, validating_set, var_list_nComp, seed=idp)
@@ -124,10 +124,9 @@ def main():
         final_model, log_register = hmm_u.select_best_model_from_list(best_model_list, dataSet)
 
         """ Ordering the best model according to a Hierarchical Clustering """
-        ordered_model = hmm_u.ordered_hmm_model(final_model, method='average',metric='euclidean')
+        ordered_model = hmm_u.ordered_hmm_model(final_model, method='average', metric='euclidean')
 
-
-        """ Saving the best model and his log_register for posterior analysis"""
+        """ Saving the best model and his log_register for posterior analysis """
         print("[{0:4.2f}] Select from final list ({2}) in: \t{1:4.2f}".format(d_time(tr), d_time(tc),
                                                                                 len(best_model_list)))
         hmm_u.save_model_and_log(ordered_model, log_register, ModelPath, LogPath, fileName)
