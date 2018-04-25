@@ -12,14 +12,14 @@ def set_iCol_and_iRow(iCol, iRow, nrows, ncols):
     return iCol, iRow
 
 
-def plot_profiles_24h(df_x, df_y, states_to_plot, yLim, units, n_col=4, figsize=(16,24)):
-    nrows = int(np.ceil(len(states_to_plot)/n_col))
+def plot_profiles_24h(df_x, df_y, states_to_plot, yLim, units, n_col=4, figsize=(16, 24)):
+    nrows = int(np.ceil(len(states_to_plot) / n_col))
     n_samples = len(df_x.loc[df_x.index[0]])
     if n_samples == 24:
         labels = range(24)
     elif n_samples > 24:
-        fc = n_samples/24
-        labels =[x/fc for x in range(int(fc*n_samples))]
+        fc = n_samples / 24
+        labels = [x / fc for x in range(int(fc * n_samples))]
     else:
         labels = range(n_samples)
 
@@ -49,5 +49,5 @@ def plot_profiles_24h(df_x, df_y, states_to_plot, yLim, units, n_col=4, figsize=
         figures.append(fig)
         plt.tight_layout()
         plt.show()
-        
+
     return figures

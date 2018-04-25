@@ -11,12 +11,12 @@ DataPath = "./data/"
 ModelPath = "./model/"
 LogPath = "./log/"
 n_comp_min = 40
-n_comp_max = 70
-n_interaction = 20
+n_comp_max = 60
+n_interaction = 5
 
 
 def d_time(time_reference):
-    return time.time()-time_reference
+    return time.time() - time_reference
 
 
 def get_ipp_client(profile='default'):
@@ -75,9 +75,9 @@ def main():
         import numpy as np
 
         # Shared variables:
-        global var_dataSet      # dview.push({'var_dataSet': dataset})
-        global var_list_nComp   # dview.scatter('var_list_nComp', list(range(n_comp_min,n_comp_max+1)))
-        global var_index        # dview.scatter('var_index', list(len(df.index)))
+        global var_dataSet  # dview.push({'var_dataSet': dataset})
+        global var_list_nComp  # dview.scatter('var_list_nComp', list(range(n_comp_min,n_comp_max+1)))
+        global var_index  # dview.scatter('var_index', list(len(df.index)))
 
         """ Taking a slide of the hole data set for validating purposes """
         validating_set = var_dataSet[var_index]
@@ -91,6 +91,7 @@ def main():
         """ Send the best model and a register/log of the training process """
         return {'model': best_model, "log_register": log_register}
         # return len(var_dataSet)
+
     """ ________________________________________________________
         END: Defining the parallel function for training process 
     """
@@ -109,7 +110,7 @@ def main():
             continue
 
         print("[{0:4.2f}] Training a HMM model for: \t\t{1}".format(d_time(tr), fileName))
-        tc = time.time()    # measuring training process
+        tc = time.time()  # measuring training process
         """ Setting engines for the training process"""
         # push df.values in all engines to start training process:
         dview.push({'var_dataSet': dataSet})
@@ -119,7 +120,7 @@ def main():
         dview.pull('var_dataSet').get()
 
         """ Run the training process: (n_interaction) times in parallel fashion: """
-        best_model_list = hmm_model_training(range(n_interaction*len(v)+1))
+        best_model_list = hmm_model_training(range(n_interaction * len(v) + 1))
         # print(best_model_list)
         final_model, log_register = hmm_u.select_best_model_from_list(best_model_list, dataSet)
 
@@ -128,8 +129,8 @@ def main():
 
         """ Saving the best model and his log_register for posterior analysis """
         print("[{0:4.2f}] Select from final list ({2}) in: \t{1:4.2f}".format(d_time(tr), d_time(tc),
-                                                                                len(best_model_list)))
-        hmm_u.save_model_and_log(ordered_model, log_register, ModelPath, LogPath, fileName)
+                                                                              len(best_model_list)))
+        hmm_u.save_model_and_log(ordered_model, log_register, ModelPath, LogPath, 'hmm_' + fileName)
         print("[{0:4.2f}] End training process in: \t\t{1:4.2f}\n ".format(d_time(tr), d_time(tc)))
 
     print('[{0:4.2f}] End of script '.format(d_time(tr)))
@@ -138,5 +139,4 @@ def main():
 if __name__ == "__main__":
     main()
 
-
-main()
+# main()
