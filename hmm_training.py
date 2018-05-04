@@ -10,10 +10,10 @@ import warnings
 DataPath = "./data/"
 ModelPath = "./model/"
 LogPath = "./log/"
-n_comp_min = 40
+n_comp_min = 35
 n_comp_max = 60
 n_interaction = 5
-
+n_col_p = 24    # allow pivot if the number of columns is less than 'n_col_p'
 
 def d_time(time_reference):
     return time.time() - time_reference
@@ -100,8 +100,10 @@ def main():
 
         """ Reading and preparing dataset from DataPath"""
         df = pd.read_pickle(DataPath + fileName)
-        # transform dataset in format: [[sample1], [sample2],... , [sampleN]]
-        df = hmm_u.pivot_DF_using_dates_and_hours(df)
+        # allow pivot if the number of columns is less than 'n_col_p'
+        if len(df.columns) < n_col_p:
+            # transform dataset in format: [[sample1], [sample2],... , [sampleN]]
+            df = hmm_u.pivot_DF_using_dates_and_hours(df)
         # df = df.head(100) #only 100 samples
         dataSet = df.values
 
