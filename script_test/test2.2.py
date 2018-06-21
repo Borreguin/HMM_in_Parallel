@@ -1,11 +1,6 @@
 import multiprocessing
-import os
 
-import ipyparallel as ipp
-from subprocess import call
 import time
-
-import hmm_util as hmm_p
 
 
 def h(x):
