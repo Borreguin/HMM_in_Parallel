@@ -83,12 +83,17 @@ def get_holiday_from_page(quote_page):
     return result
 
 
-def get_holiday_dates_as_df():
-    print("Read holidays from: " + script_path)
+def get_holiday_dates_as_df(verbose=True):
+    if verbose:
+        print("Read holidays from: " + script_path)
     path_file = script_path + '\\' + file_name.replace(".json",".xlsx")
     df = pd.read_excel(path_file)
     return df
 
+
+def get_holidays_dates():
+    df_holiday = get_holiday_dates_as_df(False)
+    return pd.to_datetime(df_holiday["date"])
 
 if __name__ == "__main__":
     main()
