@@ -95,6 +95,7 @@ def get_holidays_dates():
     df_holiday = get_holiday_dates_as_df(False)
     return pd.to_datetime(df_holiday["date"])
 
+
 if __name__ == "__main__":
     main()
     holiday_dates = get_holiday_dates_as_df()

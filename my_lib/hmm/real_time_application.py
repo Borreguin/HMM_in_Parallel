@@ -12,6 +12,8 @@ from collections import Counter
 from my_lib.hmm import hmm_util as hmm_u
 from my_lib.PI_connection import pi_connect as pi
 from my_lib.holidays import holidays as hl
+from my_lib.GOP_connection import GOPserver as op
+import datetime
 
 from plotly import tools #to do subplots
 import plotly.offline as py
@@ -29,8 +31,16 @@ min_step = 0.1
 alpha_values = np.arange(-1.5, max_alpha, min_step)
 n_allowed_consecutive_violations = 3
 n_profiles_to_see = 5
+gop_svr = op.GOPserver()
+
 
 def day_cluster_matrix(hmm_model, df_y):
+    """
+
+    :param hmm_model:
+    :param df_y:
+    :return:
+    """
     n_comp = hmm_model.n_components
     dict_cl_week = dict()
     sp = min(0.005 * len(df_y.index), 3)
@@ -186,7 +196,8 @@ def obtain_expected_area(model_path, data_path, tag_name, str_time_ini, str_time
 def adjust_expect_band(df_int, df_profile, df_std):
 
     df_aux = df_int.dropna()
-    df_size = min(len(df_aux.index),len(df_profile.index))
+    similar_index = df_aux.index.intersection(df_profile.index)
+
     # Define the expected area:
     df_area = pd.DataFrame(index=df_profile.index)
     alpha_max_lim, alpha_min_lim = 0, 0
@@ -194,15 +205,14 @@ def adjust_expect_band(df_int, df_profile, df_std):
     # Adjusting the expected band by changing the alpha values:
     for alpha in alpha_values:
         df_area["min"] = df_profile['min'] - alpha * df_std.values
-        # print(len(df_int.index))
-        check_list = list(df_int[:df_size] < df_area["min"][:df_size])
+        check_list = list(df_int.loc[similar_index] < df_area["min"].loc[similar_index])
         alpha_min_lim = alpha
         if not there_is_n_consecutive_violations(check_list, n_allowed_consecutive_violations):
             break
 
     for alpha in alpha_values:
         df_area["max"] = df_profile['max'] + alpha * df_std.values
-        check_list = list(df_int[:df_size] > df_area["max"][:df_size])
+        check_list = list(df_int.loc[similar_index] > df_area["max"].loc[similar_index])
         alpha_max_lim = alpha
         if not there_is_n_consecutive_violations(check_list, n_allowed_consecutive_violations):
             break
@@ -252,6 +262,34 @@ def there_is_n_consecutive_violations(check_list, n_violations):
         return False
 
 
+def despacho_programado(str_date):
+    df_despacho, n_desp, es_redespacho = pd.DataFrame(), 0, False
+    for n_desp in range(9):
+        sql = "SELECT t.Fecha, t.Hora, t.Unidad, t.MV, t.EsRedespacho, t.NumRedespacho" + \
+              " FROM SIVO.dbo.DPL_DespachoProgramado t" + \
+              " where Fecha = '{0}'" + \
+              " and NumRedespacho = {1}"
+        sql = sql.format(str_date, n_desp)
+        df = pd.read_sql(sql, gop_svr.conn)
+        if not df.empty:
+            df_despacho = df
+            es_redespacho = df["EsRedespacho"].iloc[0]
+        else:
+            break
+
+    if df_despacho.empty:
+        return df_despacho
+
+    df_despacho = df_despacho[df_despacho["MV"] > 0]
+    df_despacho = df_despacho.groupby("Hora")
+    df_despacho = df_despacho.sum()
+    df_despacho["NumRedespacho"] = n_desp - 1
+    df_despacho["EsRedespacho"] = es_redespacho
+    str_date = datetime.datetime.strptime(str_date, '%Y-%m-%d')
+    df_despacho.index = pd.date_range(str_date, str_date + pd.Timedelta('23 H 30 m'), freq='60T')
+    return df_despacho
+
+
 """
     GRAPHICAL PART OF THIS MODULE
 """
@@ -274,16 +312,17 @@ layout = go.Layout(
 
 def traces_expected_area_and_real_time(df_expected_area):
     traces = list()
-    colors = {'min': 'green', 'max': 'green', 'real time': 'red', 'expected': 'blue'}
+    colors = {'min': '#00e600', 'max': '#00e600', 'real time': 'red', 'expected': 'blue'}
     width = {'min': 1, 'max': 1, 'real time': 4, 'expected': 2}
     dash = {'min': 'dot', 'max': 'dot', 'real time': None, 'expected': 'dashdot'}
     fill = {'min': None, 'max': 'tonexty', 'real time': None, 'expected': None}
+    names = {'min': 'Min', 'max': 'Max', 'real time': 'Demanda real', 'expected': 'Demanda esperada'}
 
     for column in df_expected_area.columns:
         trace = go.Scatter(
             x=df_expected_area.index,
             y=df_expected_area[column],
-            name=column,
+            name=names[column],
             mode='line',
             fill=fill[column],
             line=dict(
@@ -301,15 +340,53 @@ def trace_df_std(df_std):
     trace = go.Scatter(
         x=df_std.index,
         y=df_std,
-        name="standard deviation",
+        name="Desviación estándar",
         mode='line',
         fill='tozeroy',
         xaxis='x',
         yaxis='y2',
         line=dict(
             width=1,
-            color='orange',
+            color='#33adff',
             shape='hv'
+        )
+
+    )
+    return trace
+
+
+def trace_df_despacho(df_despacho):
+
+    name = "Despacho programado"
+    if df_despacho["EsRedespacho"].iloc[0]:
+        name = "Redespacho " + str(df_despacho["NumRedespacho"].iloc[0])
+
+    trace = go.Scatter(
+        x=df_despacho.index,
+        y=df_despacho["MV"],
+        name=name,
+        mode='line',
+        line=dict(
+            width=2,
+            color='orange',
+            dash='dashdot'
+        )
+    )
+    return trace
+
+
+def trace_df_error(df_error):
+    trace = go.Scatter(
+        x=df_error.index,
+        y=df_error,
+        name="Desviación de demanda",
+        mode='line',
+        xaxis='x',
+        yaxis='y2',
+        line=dict(
+            width=2,
+            color='orange',
+            dash=None
         )
 
     )
